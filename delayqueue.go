@@ -7,3 +7,7 @@ type DelayingInterface interface {
 	// AddAfter adds an item to the workqueue after the indicated duration has passed
 	AddAfter(item interface{}, duration time.Duration)
 }
+
+type DelayingQ struct {
+	Q
+}
