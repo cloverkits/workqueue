@@ -6,7 +6,7 @@ import (
 )
 
 func TestQueue(t *testing.T) {
-	q := New(nil)
+	q := NewQueue(nil)
 	if q == nil {
 		t.Fatal("New() returned nil")
 	}
@@ -86,7 +86,7 @@ func TestQueueCallback(t *testing.T) {
 		g0: make([]any, 0),
 		d0: make([]any, 0),
 	}
-	q := New(c)
+	q := NewQueue(c)
 	q.Add("foo")
 	q.Add("bar")
 	if len(c.a0) != 2 {
