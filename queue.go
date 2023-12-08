@@ -2,7 +2,6 @@ package workqueue
 
 import (
 	"sync"
-	"unsafe"
 )
 
 const defaultQueueCap = 2048
@@ -33,7 +32,7 @@ type Q struct {
 	once       sync.Once
 	cond       *sync.Cond
 	name       string
-	cb         unsafe.Pointer
+	cb         Callback
 }
 
 type emptycb struct{}
@@ -62,7 +61,7 @@ func newQ(name string, cb Callback) *Q {
 		drain:      false,
 		cond:       sync.NewCond(&sync.Mutex{}),
 		name:       name,
-		cb:         unsafe.Pointer(&cb),
+		cb:         cb,
 	}
 }
 
@@ -79,6 +78,7 @@ func (q *Q) drainS() bool {
 }
 
 // 判断当前的 Queue 是否已经关闭
+// Determine if the queue is shutting down.
 func (q *Q) ShuttingDown() bool {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
@@ -86,6 +86,7 @@ func (q *Q) ShuttingDown() bool {
 }
 
 // 关闭 Queue
+// Close the queue
 func (q *Q) ShutDown() {
 	q.once.Do(func() {
 		q.cond.L.Lock()
@@ -96,6 +97,7 @@ func (q *Q) ShutDown() {
 }
 
 // 关闭 Queue 并且等待所有的任务都被处理完
+// Close the Queue and wait for all tasks to be processed
 func (q *Q) ShutDownWithDrain() {
 	q.once.Do(func() {
 		q.cond.L.Lock()
@@ -109,6 +111,7 @@ func (q *Q) ShutDownWithDrain() {
 }
 
 // 获得 Queue 对象的数量
+// Get the number of items in the queue.
 func (q *Q) Len() int {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
@@ -116,10 +119,11 @@ func (q *Q) Len() int {
 }
 
 // 确认这个对象已经被处理，可以被释放
+// Mark an item as done processing.
 func (q *Q) Done(item any) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
-	(*(*Callback)(q.cb)).OnDone(item)
+	q.cb.OnDone(item)
 	q.processing.delete(item)
 	if q.dirty.has(item) {
 		q.queue = append(q.queue, item)
@@ -130,13 +134,14 @@ func (q *Q) Done(item any) {
 }
 
 // 向队列中添加一个对象
+// Add an item to the queue.
 func (q *Q) Add(item any) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 	if q.closed || q.dirty.has(item) {
 		return
 	}
-	(*(*Callback)(q.cb)).OnAdd(item)
+	q.cb.OnAdd(item)
 	q.dirty.insert(item)
 	if q.processing.has(item) {
 		return // (去重) already processing, don't add it to the queue
@@ -146,6 +151,7 @@ func (q *Q) Add(item any) {
 }
 
 // 从队列中获取一个对象
+// Get an item from the queue.
 func (q *Q) Get() (item any, closed bool) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
@@ -160,7 +166,7 @@ func (q *Q) Get() (item any, closed bool) {
 	// The underlying array still exists and reference this object, so the object will not be garbage collected.
 	q.queue[0] = nil
 	q.queue = q.queue[1:]
-	(*(*Callback)(q.cb)).OnGet(item)
+	q.cb.OnGet(item)
 	q.processing.insert(item)
 	q.dirty.delete(item)
 	return item, false

@@ -42,6 +42,8 @@ func (c *heap) Push(ele *WaitingFor) {
 	c.Up(c.Len() - 1)
 }
 
+// Up 从 i 开始向上调整堆
+// Adjust the heap from i upwards
 func (c *heap) Up(i int) {
 	var j = (i - 1) >> 2
 	if i >= 1 && c.Less(i, j) {
@@ -50,6 +52,8 @@ func (c *heap) Up(i int) {
 	}
 }
 
+// Pop 弹出堆顶元素
+// Pop the top Element of the heap
 func (c *heap) Pop() (ele *WaitingFor) {
 	var n = c.Len()
 	switch n {
@@ -66,6 +70,8 @@ func (c *heap) Pop() (ele *WaitingFor) {
 	return
 }
 
+// Delete 删除堆中的第 i 个元素
+// Delete the i-th element in the heap
 func (c *heap) Delete(i int) {
 	var n = c.Len()
 	switch n {
@@ -85,6 +91,8 @@ func (c *heap) Delete(i int) {
 	}
 }
 
+// Down 从 i 开始向下调整堆
+// Adjust the heap from i downwards
 func (c *heap) Down(i, n int) {
 	var index1 = i<<2 + 1
 	if index1 >= n {

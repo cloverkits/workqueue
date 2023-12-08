@@ -31,6 +31,7 @@ type DelayingQ struct {
 	wg          sync.WaitGroup
 	waitingHeap *heap        // 基于对象的时间堆
 	now         atomic.Int64 // 当前时间
+	cb          DelayingCallback
 }
 
 func NewDelayingQueue(cb DelayingCallback) *DelayingQ {
@@ -47,6 +48,7 @@ func newDelayingQ(name string, cb DelayingCallback) *DelayingQ {
 		wg:          sync.WaitGroup{},
 		waitingHeap: &heap{data: make([]*WaitingFor, 0, defaultQueueCap)},
 		now:         atomic.Int64{},
+		cb:          cb,
 	}
 	q.ctx, q.cancel = context.WithCancel(context.Background())
 	q.wg.Add(2)
@@ -61,7 +63,7 @@ func (q *DelayingQ) AddAfter(item interface{}, duration time.Duration) {
 	if q.ShuttingDown() {
 		return
 	}
-	(*(*DelayingCallback)(q.cb)).OnRetry(item, duration)
+	q.cb.OnRetry(item, duration)
 	if duration <= 0 {
 		q.Add(item)
 		return
