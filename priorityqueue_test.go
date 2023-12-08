@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-func TestDelayingQueue(t *testing.T) {
-	q := NewDelayingQueue(nil)
+func TestPriorityQueue(t *testing.T) {
+	q := NewPriorityQueue(nil)
 	if q == nil {
 		t.Fatal("New() returned nil")
 	}
@@ -62,33 +62,33 @@ func TestDelayingQueue(t *testing.T) {
 	}
 }
 
-type dcb struct {
-	a0, g0, d0, r0 []any
+type pcb struct {
+	a0, g0, d0, p0 []any
 }
 
-func (c *dcb) OnAdd(item any) {
+func (c *pcb) OnAdd(item any) {
 	c.a0 = append(c.a0, item)
 }
 
-func (c *dcb) OnGet(item any) {
+func (c *pcb) OnGet(item any) {
 	c.g0 = append(c.g0, item)
 }
 
-func (c *dcb) OnDone(item any) {
+func (c *pcb) OnDone(item any) {
 	c.d0 = append(c.d0, item)
 }
 
-func (c *dcb) OnAfter(item any, _ time.Duration) {
-	c.r0 = append(c.r0, item)
+func (c *pcb) OnWeight(item any, _ int) {
+	c.p0 = append(c.p0, item)
 }
 
-func TestDelayingQueueWithCallback(t *testing.T) {
-	c := &dcb{}
-	q := NewDelayingQueue(c)
-	q.AddAfter("foo", time.Second)
-	q.AddAfter("bar", time.Second)
-	if len(c.r0) != 2 {
-		t.Fatal("OnRetry callback failed")
+func TestPriorityQueueWithCallback(t *testing.T) {
+	c := &pcb{}
+	q := NewPriorityQueue(c)
+	q.AddWeight("foo", 4)
+	q.AddWeight("bar", 2)
+	if len(c.p0) != 2 {
+		t.Fatal("OnDone callback failed")
 	}
 	q.Done("foo")
 	q.Done("bar")

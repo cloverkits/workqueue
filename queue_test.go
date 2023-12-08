@@ -61,7 +61,6 @@ func TestQueue(t *testing.T) {
 		t.Fatal("Get() returned wrong item")
 	}
 	q.Done(item)
-	q.ShutDown()
 }
 
 type cb struct {
@@ -80,12 +79,8 @@ func (c *cb) OnDone(item any) {
 	c.d0 = append(c.d0, item)
 }
 
-func TestQueueCallback(t *testing.T) {
-	c := &cb{
-		a0: make([]any, 0),
-		g0: make([]any, 0),
-		d0: make([]any, 0),
-	}
+func TestQueueWithCallback(t *testing.T) {
+	c := &cb{}
 	q := NewQueue(c)
 	q.Add("foo")
 	q.Add("bar")

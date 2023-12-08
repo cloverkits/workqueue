@@ -15,13 +15,7 @@ type DelayingInterface interface {
 
 type DelayingCallback interface {
 	Callback
-	OnRetry(item any, duration time.Duration)
-}
-
-type WaitingFor struct {
-	data     any
-	expireAt int64
-	index    int
+	OnAfter(item any, duration time.Duration)
 }
 
 type DelayingQ struct {
@@ -46,7 +40,7 @@ func newDelayingQ(name string, cb DelayingCallback) *DelayingQ {
 	q := &DelayingQ{
 		Q:           *newQ(name, cb),
 		wg:          sync.WaitGroup{},
-		waitingHeap: &heap{data: make([]*WaitingFor, 0, defaultQueueCap)},
+		waitingHeap: &heap{data: make([]*waitingFor, 0, defaultQueueCap)},
 		now:         atomic.Int64{},
 		cb:          cb,
 	}
@@ -63,14 +57,14 @@ func (q *DelayingQ) AddAfter(item interface{}, duration time.Duration) {
 	if q.ShuttingDown() {
 		return
 	}
-	q.cb.OnRetry(item, duration)
+	q.cb.OnAfter(item, duration)
 	if duration <= 0 {
 		q.Add(item)
 		return
 	}
-	q.waitingHeap.Push(&WaitingFor{
-		data:     item,
-		expireAt: time.Now().Add(duration).UnixNano(),
+	q.waitingHeap.Push(&waitingFor{
+		data:  item,
+		value: time.Now().Add(duration).UnixNano(),
 	})
 }
 
@@ -105,6 +99,8 @@ func (q *DelayingQ) ShutDownWithDrain() {
 	})
 }
 
+// 同步当前时间
+// sync current time
 func (q *DelayingQ) syncNow() {
 	heartbeat := time.NewTicker(time.Second)
 	defer func() {
@@ -126,12 +122,7 @@ func (q *DelayingQ) syncNow() {
 // 从堆中读取 WaitingFor，如果对象没有超时，就重新放回堆
 // read from heap, if the object has not timed out, put it back in the heap
 func (q *DelayingQ) waitingLoop() {
-	heartbeat := time.NewTicker(5 * time.Second)
-	defer func() {
-		q.wg.Done()
-		heartbeat.Stop()
-	}()
-
+	defer q.wg.Done()
 	for {
 		select {
 		case <-q.ctx.Done():
@@ -141,11 +132,10 @@ func (q *DelayingQ) waitingLoop() {
 			if entry == nil {
 				continue
 			}
-			if entry.expireAt < q.now.Load() {
+			if entry.value < q.now.Load() {
 				q.Add(entry.data)
 			} else {
 				q.waitingHeap.Push(entry)
-				<-heartbeat.C // 已经到读到没有超时的对象，等待一段时间再读
 			}
 		}
 	}

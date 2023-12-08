@@ -1,18 +1,24 @@
 package workqueue
 
+type waitingFor struct {
+	data  any
+	value int64
+	index int
+}
+
 type heap struct {
-	data []*WaitingFor
+	data []*waitingFor
 }
 
 func (c *heap) Reset() {
 	c.data = c.data[:0]
 }
 
-func (c *heap) Less(i, j int) bool { return c.data[i].expireAt < c.data[j].expireAt }
+func (c *heap) Less(i, j int) bool { return c.data[i].value < c.data[j].value }
 
-func (c *heap) UpdateTTL(ele *WaitingFor, exp int64) {
-	var down = exp > ele.expireAt
-	ele.expireAt = exp
+func (c *heap) Update(ele *waitingFor, value int64) {
+	var down = value > ele.value
+	ele.value = value
 	if down {
 		c.Down(ele.index, c.Len())
 	} else {
@@ -21,7 +27,7 @@ func (c *heap) UpdateTTL(ele *WaitingFor, exp int64) {
 }
 
 func (c *heap) min(i, j int) int {
-	if c.data[i].expireAt < c.data[j].expireAt {
+	if c.data[i].value < c.data[j].value {
 		return i
 	}
 	return j
@@ -36,7 +42,7 @@ func (c *heap) Swap(i, j int) {
 	c.data[i], c.data[j] = c.data[j], c.data[i]
 }
 
-func (c *heap) Push(ele *WaitingFor) {
+func (c *heap) Push(ele *waitingFor) {
 	ele.index = c.Len()
 	c.data = append(c.data, ele)
 	c.Up(c.Len() - 1)
@@ -54,7 +60,7 @@ func (c *heap) Up(i int) {
 
 // Pop 弹出堆顶元素
 // Pop the top Element of the heap
-func (c *heap) Pop() (ele *WaitingFor) {
+func (c *heap) Pop() (ele *waitingFor) {
 	var n = c.Len()
 	switch n {
 	case 0:
@@ -122,6 +128,6 @@ func (c *heap) Down(i, n int) {
 
 // Front 访问堆顶元素
 // Accessing the top Element of the heap
-func (c *heap) Front() *WaitingFor {
+func (c *heap) Front() *waitingFor {
 	return c.data[0]
 }
