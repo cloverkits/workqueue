@@ -102,7 +102,7 @@ func (c *heap) Down(i, n int) {
 	var index2 = i<<2 + 2
 	var index3 = i<<2 + 3
 	var index4 = i<<2 + 4
-	var j = -1
+	var j int
 
 	if index4 < n {
 		j = c.min(c.min(index1, index2), c.min(index3, index4))
