@@ -1,7 +1,6 @@
 <div align="center">
 	<h1>WorkQueue</h1>
 	<img src="assets/logo.png" alt="logo" width="300px">
-    <h3 align="center">Simple, Fast, Reliable WorkQueue for Go</h3>
 </div>
 
 # Introduction
