@@ -5,7 +5,7 @@
 
 # Introduction
 
-WorkQueue is a simple, fast, reliable work queue written in Go. It is designed to be easy to use and to have minimal dependencies. It supports multiple queue types and is designed to be easily extensible which mean you can easily write a new queue type and use it with WorkQueue.
+WorkQueue is a simple, fast, reliable work queue written in Go. It supports multiple queue types and is designed to be easily extensible which mean you can easily write a new queue type and use it with WorkQueue.
 
 # Queue Types
 
@@ -20,7 +20,7 @@ WorkQueue is a simple, fast, reliable work queue written in Go. It is designed t
 -   No third-party dependencies
 -   High performance
 -   Low memory usage
--   Use quadruple heap to maintain the expiration time, effectively reduce the height of the tree, and improve the insertion performance
+-   Use `quadruple heap`
 -   Support action callback functions
 
 # Benchmark
@@ -73,21 +73,21 @@ import (
 )
 
 func main() {
-	q := workqueue.NewQueue(nil)
+	q := workqueue.NewQueue(nil) // nil, no callback functions
 
 	go func() {
 		for {
-			item, shutdown := q.Get()
+			item, shutdown := q.Get() // get item from queue
 			if shutdown {
 				fmt.Println("shutdown")
 				return
 			}
 			fmt.Println("get item:", item)
-			q.Done(item)
+			q.Done(item) // mark item as done, 'Done' is required after 'Get'
 		}
 	}()
 
-	q.Add("hello")
+	q.Add("hello") // add item to queue
 	q.Add("world")
 
 	q.ShutDown()
@@ -202,7 +202,7 @@ Oh, I forgot to say, the rate limit is based on the token bucket algorithm. but 
 
 `WorkQueue` supports action callback function. Specify a callback functions when create a queue, and the callback function will be called when do some action.
 
-Other words, callback functions is not required, you can also use `WorkQueue` without callback functions. Set `nil` when create a queue, and the callback function will not be called.
+Callback functions is not required that you can use `WorkQueue` without callback functions. Set `nil` when create a queue, and the callback function will not be called.
 
 ### Example
 
@@ -252,7 +252,7 @@ func main() {
 
 ### Reference
 
-There are queues callback functions, you can use it as you like.
+The queue callback functions are loosely used and can be easily extended, you can use it as you like.
 
 #### Queue
 
