@@ -66,7 +66,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/shengyanli1982/workqueue"
 )
@@ -90,6 +89,7 @@ func main() {
 	q.Add("world")
 
 	q.ShutDown()
+}
 ```
 
 ## Delaying Queue
@@ -107,7 +107,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/shengyanli1982/workqueue"
 )
@@ -133,6 +132,7 @@ func main() {
 	q.AddAfter("delay 2 sec", time.Second*2)
 
 	q.ShutDown()
+}
 ```
 
 ## Priority Queue
@@ -150,7 +150,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/shengyanli1982/workqueue"
 )
@@ -176,6 +175,7 @@ func main() {
 	q.AddWeight("priority: 2", 2)
 
 	q.ShutDown()
+}
 ```
 
 ## RateLimiting Queue
@@ -209,7 +209,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/shengyanli1982/workqueue"
 )
