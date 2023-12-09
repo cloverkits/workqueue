@@ -7,8 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
-
 type pcb struct {
 	a0, g0, d0, p0 []any
 }
