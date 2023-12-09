@@ -90,7 +90,7 @@ func (q *DelayingQ) ShutDownWithDrain() {
 		defer q.cond.L.Unlock()
 		q.drain = true
 		q.shutdown()
-		for q.processing.len() > 0 && q.drainS() {
+		for q.processing.len() > 0 && q.drain {
 			q.cond.Wait()
 		}
 		q.cancel()

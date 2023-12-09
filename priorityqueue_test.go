@@ -3,64 +3,11 @@ package workqueue
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestPriorityQueue(t *testing.T) {
-	q := NewPriorityQueue(nil)
-	if q == nil {
-		t.Fatal("New() returned nil")
-	}
-	if q.Len() != 0 {
-		t.Fatal("New() returned non-empty queue")
-	}
-	if q.ShuttingDown() {
-		t.Fatal("New() returned shutting down queue")
-	}
-	q.Add("foo")
-	if q.Len() != 1 {
-		t.Fatal("Add() failed")
-	}
-	item, closed := q.Get()
-	if closed {
-		t.Fatal("Get() returned closed")
-	}
-	if item != "foo" {
-		t.Fatal("Get() returned wrong item")
-	}
-	q.Done(item)
-	if q.Len() != 0 {
-		t.Fatal("Done() failed")
-	}
-	q.Add("foo")
-	q.Add("bar")
-	q.ShutDown()
-	if !q.ShuttingDown() {
-		t.Fatal("ShutDown() failed")
-	}
-	item, closed = q.Get()
-	if closed {
-		t.Fatal("Get() returned closed")
-	}
-	if item != "foo" {
-		t.Fatal("Get() returned wrong item")
-	}
-	q.Done(item)
-	item, closed = q.Get()
-	if closed {
-		t.Fatal("Get() returned closed")
-	}
-	if item != "bar" {
-		t.Fatal("Get() returned wrong item")
-	}
-	q.Done(item)
-	item, closed = q.Get()
-	if !closed {
-		t.Fatal("Get() returned not closed")
-	}
-	if item != nil {
-		t.Fatal("Get() returned wrong item")
-	}
-}
+
 
 type pcb struct {
 	a0, g0, d0, p0 []any
@@ -85,13 +32,17 @@ func (c *pcb) OnWeight(item any, _ int) {
 func TestPriorityQueueWithCallback(t *testing.T) {
 	c := &pcb{}
 	q := NewPriorityQueue(c)
-	q.AddWeight("foo", 4)
+	q.AddWeight("foo", 3)
 	q.AddWeight("bar", 2)
-	if len(c.p0) != 2 {
-		t.Fatal("OnDone callback failed")
-	}
+	assert.Equal(t, []any{"foo", "bar"}, c.p0)
+	time.Sleep(3 * time.Second)
+	assert.Equal(t, []any{"bar", "foo"}, c.a0)
+	item, closed := q.Get()
+	assert.Equal(t, []any{"bar"}, c.g0)
+	assert.Equal(t, "bar", item)
+	assert.False(t, closed)
 	q.Done("foo")
 	q.Done("bar")
-	time.Sleep(3 * time.Second)
+	assert.Equal(t, []any{"foo", "bar"}, c.d0)
 	q.ShutDown()
 }

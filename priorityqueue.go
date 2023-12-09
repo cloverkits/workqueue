@@ -7,7 +7,7 @@ import (
 
 type PriorityInterface interface {
 	Interface
-	// AddWeight adds an item to the workqueue with the given priority.
+	// AddWeight adds an item to the workqueue with the given priority. priority low is better, 0 is imddiatly process
 	AddWeight(item interface{}, priority int)
 }
 
@@ -85,7 +85,7 @@ func (q *PriorityQ) ShutDownWithDrain() {
 		defer q.cond.L.Unlock()
 		q.drain = true
 		q.shutdown()
-		for q.processing.len() > 0 && q.drainS() {
+		for q.processing.len() > 0 && q.drain {
 			q.cond.Wait()
 		}
 		q.cancel()

@@ -71,12 +71,6 @@ func (q *Q) shutdown() {
 	q.cond.Broadcast()
 }
 
-func (q *Q) drainS() bool {
-	q.cond.L.Lock()
-	defer q.cond.L.Unlock()
-	return q.drain
-}
-
 // 判断当前的 Queue 是否已经关闭
 // Determine if the queue is shutting down.
 func (q *Q) ShuttingDown() bool {
@@ -88,26 +82,22 @@ func (q *Q) ShuttingDown() bool {
 // 关闭 Queue
 // Close the queue
 func (q *Q) ShutDown() {
-	q.once.Do(func() {
-		q.cond.L.Lock()
-		defer q.cond.L.Unlock()
-		q.drain = false
-		q.shutdown()
-	})
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
+	q.drain = false
+	q.shutdown()
 }
 
 // 关闭 Queue 并且等待所有的任务都被处理完
 // Close the Queue and wait for all tasks to be processed
 func (q *Q) ShutDownWithDrain() {
-	q.once.Do(func() {
-		q.cond.L.Lock()
-		defer q.cond.L.Unlock()
-		q.drain = true
-		q.shutdown()
-		for q.processing.len() > 0 && q.drainS() {
-			q.cond.Wait()
-		}
-	})
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
+	q.drain = true
+	q.shutdown()
+	for q.processing.len() > 0 && q.drain {
+		q.cond.Wait()
+	}
 }
 
 // 获得 Queue 对象的数量

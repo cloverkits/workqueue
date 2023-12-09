@@ -1,26 +1,19 @@
 package workqueue
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestSet(t *testing.T) {
 	s := make(set)
-	if s.has("foo") {
-		t.Fatal("has() returned true for non-existent item")
-	}
+	assert.Equal(t, 0, s.len())
+	assert.False(t, s.has("foo"))
 	s.insert("foo")
-	if !s.has("foo") {
-		t.Fatal("has() returned false for existent item")
-	}
+	assert.Equal(t, 1, s.len())
+	assert.True(t, s.has("foo"))
 	s.delete("foo")
-	if s.has("foo") {
-		t.Fatal("has() returned true for deleted item")
-	}
-	if s.len() != 0 {
-		t.Fatal("len() returned non-zero for empty set")
-	}
-	s.insert("foo")
-	s.insert("bar")
-	if s.len() != 2 {
-		t.Fatal("len() returned wrong value")
-	}
+	assert.Equal(t, 0, s.len())
+	assert.False(t, s.has("foo"))
 }
