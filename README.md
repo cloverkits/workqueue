@@ -45,6 +45,7 @@ Here are some examples of how to use WorkQueue. but you can also refer to the [e
 
 `Queue` is a simple queue in project, all queues are based on it. It is a FIFO queue and has `dirty` and `processing` set to track the state of the queue. If you want to `Add` an exist item to the queue, unfortunately, it will not be added to the queue again.
 
+>[!IMPORTANT]
 > Here is an very important thing to note, if you want to add exist one to the queue again, you must call `Done` method to mark the item as done.
 
 ### Methods
