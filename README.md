@@ -45,8 +45,10 @@ Here are some examples of how to use WorkQueue. but you can also refer to the [e
 
 `Queue` is a simple queue in project, all queues are based on it. It is a FIFO queue and has `dirty` and `processing` set to track the state of the queue. If you want to `Add` an exist item to the queue, unfortunately, it will not be added to the queue again.
 
->[!IMPORTANT]
+> [!IMPORTANT]
 > Here is an very important thing to note, if you want to add exist one to the queue again, you must call `Done` method to mark the item as done.
+>
+> `Done` method is required after `Get` method, don't forget it.
 
 ### Methods
 
@@ -181,7 +183,8 @@ func main() {
 
 `RateLimiting Queue` is a queue that supports rate limiting execution. It is based on `Queue` and uses a `heap` to maintain the expiration time of the item. When you add an item to the queue, you can specify the rate limit of the item, and the item will be executed according to the rate limit.
 
-Oh, I forgot to say, default rate limit is based on the token bucket algorithm. You can define your own rate limit algorithm by implementing the `RateLimiter` interface.
+> [!TIP]
+> default rate limit is based on the `token bucket` algorithm. You can define your own rate limit algorithm by implementing the `RateLimiter` interface.
 
 ### Methods
 
@@ -199,7 +202,8 @@ Oh, I forgot to say, default rate limit is based on the token bucket algorithm. 
 
 `WorkQueue` supports action callback function. Specify a callback functions when create a queue, and the callback function will be called when do some action.
 
-Callback functions is not required that you can use `WorkQueue` without callback functions. Set `nil` when create a queue, and the callback function will not be called.
+> [!TIP]
+> Callback functions is not required that you can use `WorkQueue` without callback functions. Set `nil` when create a queue, and the callback function will not be called.
 
 ### Example
 
