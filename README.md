@@ -45,11 +45,7 @@ Here are some examples of how to use WorkQueue. but you can also refer to the [e
 
 `Queue` is a simple queue in project, all queues are based on it. It is a FIFO queue and has `dirty` and `processing` set to track the state of the queue. If you want to `Add` an exist item to the queue, unfortunately, it will not be added to the queue again.
 
-When item is already in the queue, it will be marked as dirty. After you call `Get` method, the item will be marked as processing.
-
-If you not call `Done` method, you want to add the exist item to the queue again, it will not be added to the queue again. `Done` method will remove item from `processing` set, if item in `dirty` set, it will be added to the queue again.
-
-Here is an very important thing to note, if you want to add exist one to the queue again, you must call `Done` method to mark the item as done.
+> Here is an very important thing to note, if you want to add exist one to the queue again, you must call `Done` method to mark the item as done.
 
 ### Methods
 
@@ -184,7 +180,7 @@ func main() {
 
 `RateLimiting Queue` is a queue that supports rate limiting execution. It is based on `Queue` and uses a `heap` to maintain the expiration time of the item. When you add an item to the queue, you can specify the rate limit of the item, and the item will be executed according to the rate limit.
 
-Oh, I forgot to say, the rate limit is based on the token bucket algorithm. but you can define your own rate limit algorithm by implementing the `RateLimiter` interface.
+Oh, I forgot to say, default rate limit is based on the token bucket algorithm. You can define your own rate limit algorithm by implementing the `RateLimiter` interface.
 
 ### Methods
 
