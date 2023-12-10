@@ -25,10 +25,14 @@ type PriorityQ struct {
 	cb          PriorityCallback
 }
 
+// 创建一个 PriorityQueue 对象
+// Create a new PriorityQueue object.
 func NewPriorityQueue(cb PriorityCallback) *PriorityQ {
 	return newPriorityQ("", cb)
 }
 
+// 创建一个带名称的 PriorityQueue 对象
+// Create a new named PriorityQueue object.
 func NewNamedPriorityQueue(name string, cb PriorityCallback) *PriorityQ {
 	return newPriorityQ(name, cb)
 }

@@ -28,10 +28,14 @@ type DelayingQ struct {
 	cb          DelayingCallback
 }
 
+// 创建一个 DelayingQueue 对象
+// Create a new DelayingQueue object.
 func NewDelayingQueue(cb DelayingCallback) *DelayingQ {
 	return newDelayingQ("", cb)
 }
 
+// 创建一个带名称的 DelayingQueue 对象
+// Create a new named DelayingQueue object.
 func NewNamedDelayingQueue(name string, cb DelayingCallback) *DelayingQ {
 	return newDelayingQ(name, cb)
 }

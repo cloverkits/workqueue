@@ -35,16 +35,28 @@ type Q struct {
 	cb         Callback
 }
 
+// 空实现
 type emptycb struct{}
 
+// Queue 的回调接口
 func (emptycb) OnDone(_ any) {}
 func (emptycb) OnAdd(_ any)  {}
 func (emptycb) OnGet(_ any)  {}
 
+// DelayingQueue 的回调接口
+func (emptycb) OnAfter(_ any, _ int) {}
+
+// PriorityQueue 的回调接口
+func (emptycb) OnWeight(_ any, _ int) {}
+
+// 创建一个 Queue 对象
+// Create a new Queue object.
 func NewQueue(cb Callback) *Q {
 	return newQ("", cb)
 }
 
+// 创建一个带名称的 Queue 对象
+// Create a new named Queue object.
 func NewNamedQueue(name string, cb Callback) *Q {
 	return newQ(name, cb)
 }
