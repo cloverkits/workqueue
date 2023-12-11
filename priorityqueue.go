@@ -3,7 +3,10 @@ package workqueue
 import (
 	"context"
 	"sync"
+	"time"
 )
+
+const DeafultQueueSortWindows = 500 * time.Millisecond
 
 type PriorityInterface interface {
 	Interface
@@ -17,34 +20,42 @@ type PriorityCallback interface {
 }
 
 type PriorityQ struct {
-	Q           // 继承 Q
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
-	waitingHeap *heap // 基于对象的权重堆
-	cb          PriorityCallback
-	lockHeap    sync.Mutex
+	Q            // 继承 Q
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	priorityHeap *heap // 基于对象的权重堆
+	cb           PriorityCallback
+	lockHeap     sync.Mutex
+	timeWindow   time.Duration // 时间窗口, 用来在这个窗口期对象的权重排序
 }
 
 // 创建一个 PriorityQueue 对象
 // Create a new PriorityQueue object.
-func NewPriorityQueue(cb PriorityCallback) *PriorityQ {
-	return newPriorityQ("", cb)
+func NewPriorityQueue(win time.Duration, cb PriorityCallback) *PriorityQ {
+	return newPriorityQ("", win, cb)
 }
 
 // 创建一个带名称的 PriorityQueue 对象
 // Create a new named PriorityQueue object.
-func NewNamedPriorityQueue(name string, cb PriorityCallback) *PriorityQ {
-	return newPriorityQ(name, cb)
+func NewNamedPriorityQueue(name string, win time.Duration, cb PriorityCallback) *PriorityQ {
+	return newPriorityQ(name, win, cb)
 }
 
-func newPriorityQ(name string, cb PriorityCallback) *PriorityQ {
+func newPriorityQ(name string, win time.Duration, cb PriorityCallback) *PriorityQ {
+	if cb == nil {
+		cb = emptycb{}
+	}
+	if win <= DeafultQueueSortWindows {
+		win = DeafultQueueSortWindows
+	}
 	q := &PriorityQ{
-		Q:           *newQ(name, cb),
-		wg:          sync.WaitGroup{},
-		waitingHeap: &heap{data: make([]*waitingFor, 0, defaultQueueCap)},
-		cb:          cb,
-		lockHeap:    sync.Mutex{},
+		Q:            *newQ(name, cb),
+		wg:           sync.WaitGroup{},
+		priorityHeap: &heap{data: make([]*waitingFor, 0, defaultQueueCap)},
+		cb:           cb,
+		lockHeap:     sync.Mutex{},
+		timeWindow:   win,
 	}
 	q.ctx, q.cancel = context.WithCancel(context.Background())
 	q.wg.Add(1)
@@ -63,61 +74,57 @@ func (q *PriorityQ) AddWeight(item any, priority int) {
 		q.Add(item)
 		return
 	}
-	q.waitingHeap.Push(&waitingFor{
+	q.lockHeap.Lock()
+	q.priorityHeap.Push(&waitingFor{
 		data:  item,
 		value: int64(priority),
 	})
+	q.lockHeap.Unlock()
 }
 
 // / 关闭 Queue
 // Close the queue
 func (q *PriorityQ) ShutDown() {
-	q.once.Do(func() {
-		q.cond.L.Lock()
-		q.drain = false
-		q.shutdown()
-		q.cancel()
-		q.wg.Wait()
-		q.cond.L.Unlock()
-		q.lockHeap.Lock()
-		q.waitingHeap.Reset()
-		q.lockHeap.Unlock()
-	})
+	q.Q.ShutDown()
+	q.cancel()
+	q.wg.Wait()
+	q.lockHeap.Lock()
+	q.priorityHeap.Reset()
+	q.lockHeap.Unlock()
+
 }
 
 // 关闭 Queue 并且等待所有的任务都被处理完
 // Close the Queue and wait for all tasks to be processed
 func (q *PriorityQ) ShutDownWithDrain() {
-	q.once.Do(func() {
-		q.cond.L.Lock()
-		q.drain = true
-		q.shutdown()
-		for q.processing.len() > 0 && q.drain {
-			q.cond.Wait()
-		}
-		q.cancel()
-		q.wg.Wait()
-		q.cond.L.Unlock()
-		q.lockHeap.Lock()
-		q.waitingHeap.Reset()
-		q.lockHeap.Unlock()
-	})
+	q.Q.ShutDownWithDrain()
+	q.cancel()
+	q.wg.Wait()
+	q.lockHeap.Lock()
+	q.priorityHeap.Reset()
+	q.lockHeap.Unlock()
 }
 
 // 从堆中读取 WaitingFor，如果对象没有超时，就重新放回堆
 // read from heap, if the object has not timed out, put it back in the heap
 func (q *PriorityQ) waitingLoop() {
-	defer q.wg.Done()
+	heartbeat := time.NewTicker(q.timeWindow)
+	defer func() {
+		q.wg.Done()
+		heartbeat.Stop()
+	}()
+
 	for {
 		select {
 		case <-q.ctx.Done():
 			return
-		default:
-			entry := q.waitingHeap.Pop()
-			if entry == nil {
-				continue
+		case <-heartbeat.C:
+			q.lockHeap.Lock()
+			entry := q.priorityHeap.Pop()
+			q.lockHeap.Unlock()
+			if entry != nil {
+				q.Add(entry.data)
 			}
-			q.Add(entry.data)
 		}
 	}
 }

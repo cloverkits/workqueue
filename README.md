@@ -97,8 +97,7 @@ func main() {
 
 `Delaying Queue` is a queue that supports delaying execution. It is based on `Queue` and uses a `heap` to maintain the expiration time of the item. When you add an item to the queue, you can specify the delay time, and the item will be executed after the delay time.
 
-> [!IMPORTANT]
-> `Delaying Queue` has a `goroutine` that is sync the current time, used to update timeout scale. It can not be shut down and modified.
+> [!IMPORTANT] > `Delaying Queue` has a `goroutine` that is sync the current time, used to update timeout scale. It can not be shut down and modified.
 >
 > Timer minimum resync time is `500ms`, which mean if you set the item's delay time less than `500ms`, it will be processed after `500ms`.
 
@@ -128,7 +127,7 @@ func main() {
 				return
 			}
 			fmt.Println("get item:", item)
-			q.Done(item)
+			q.Done(item) // mark item as done, 'Done' is required after 'Get'
 		}
 	}()
 
@@ -144,6 +143,14 @@ func main() {
 ## Priority Queue
 
 `Priority Queue` is a queue that supports priority execution. It is based on `Queue` and uses a `heap` to maintain the priority of the item. When you add an item to the queue, you can specify the priority of the item, and the item will be executed according to the priority.
+
+> [!CAUTION]
+> The 'Priority Queue' requires a window to sort the elements currently added to the Queue. The elements in this time window are sorted in order of `priority` from smallest to largest. The order of elements in two different time Windows is not guaranteed to be sorted by `priority`, even if the two Windows are immediately adjacent.
+>
+> The default window size is `500ms`, you can set it when create a queue.
+>
+> -   Dont't set the window size too small, it will cause the queue to be sorted frequently, which will affect the performance of the queue.
+> -   Dont't set the window size too large, it will cause the elements sorted to wait for a long time, which will affect elements to be executed in time.
 
 ### Methods
 
@@ -161,7 +168,7 @@ import (
 )
 
 func main() {
-	q := workqueue.NewPriorityQueue(nil)
+	q := workqueue.NewPriorityQueue(workqueue.DeafultQueueSortWindows, nil)
 
 	go func() {
 		for {
@@ -171,7 +178,7 @@ func main() {
 				return
 			}
 			fmt.Println("get item:", item)
-			q.Done(item)
+			q.Done(item) // mark item as done, 'Done' is required after 'Get'
 		}
 	}()
 

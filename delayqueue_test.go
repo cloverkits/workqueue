@@ -32,9 +32,9 @@ func (c *dcb) OnAfter(item any, _ time.Duration) {
 func TestDelayingQueueStandard(t *testing.T) {
 	t.Run("Delaying", func(t *testing.T) {
 		q := NewDelayingQueue(nil)
+		defer q.ShutDown()
 		q.AddAfter(time.Now().Local().UnixMilli(), 2*time.Second)
 		timeoutCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-		defer q.ShutDown()
 		for {
 			select {
 			case <-timeoutCtx.Done():
@@ -56,9 +56,9 @@ func TestDelayingQueueStandard(t *testing.T) {
 	// 因为时间同步是 500 毫秒一次，所以这里延迟小于 500 毫秒的延迟任务会被延迟到 500 毫秒后执行。
 	t.Run("DelayingSmallTimeSlice", func(t *testing.T) {
 		q := NewDelayingQueue(nil)
+		defer q.ShutDown()
 		q.AddAfter(time.Now().Local().UnixMilli(), 2*time.Millisecond)
 		timeoutCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-		defer q.ShutDown()
 		for {
 			select {
 			case <-timeoutCtx.Done():

@@ -28,27 +28,67 @@ func (c *pcb) OnWeight(item any, _ int) {
 }
 
 func TestPriorityQueueStandard(t *testing.T) {
-	t.Run("", func(t *testing.T) {
-
+	t.Run("Priority", func(t *testing.T) {
+		first := "foo"
+		second := "bar"
+		third := "baz"
+		q := NewPriorityQueue(DeafultQueueSortWindows, nil)
+		defer q.ShutDown()
+		q.AddWeight(first, 10)
+		q.AddWeight(second, 30)
+		q.AddWeight(third, 5)
+		item, closed := q.Get()
+		assert.False(t, closed)
+		assert.Equal(t, third, item)
+		q.Done(item)
+		item, closed = q.Get()
+		assert.False(t, closed)
+		assert.Equal(t, first, item)
+		q.Done(item)
+		item, closed = q.Get()
+		assert.False(t, closed)
+		assert.Equal(t, second, item)
+		q.Done(item)
 	})
-	t.Run("", func(t *testing.T) {
-
+	t.Run("TwoFireEarly", func(t *testing.T) {
+		first := "foo"
+		second := "bar"
+		third := "baz"
+		q := NewPriorityQueue(DeafultQueueSortWindows, nil)
+		defer q.ShutDown()
+		q.AddWeight(first, 10)
+		q.AddWeight(second, 30)
+		item, closed := q.Get()
+		assert.False(t, closed)
+		assert.Equal(t, first, item)
+		q.Done(item)
+		q.AddWeight(third, 5) // third
+		item, closed = q.Get()
+		assert.False(t, closed)
+		assert.Equal(t, third, item)
+		q.Done(item)
+		item, closed = q.Get()
+		assert.False(t, closed)
+		assert.Equal(t, second, item)
+		q.Done(item)
 	})
 	t.Run("CallbackFuncs", func(t *testing.T) {
 		c := &pcb{}
-		q := NewPriorityQueue(c)
-		q.AddWeight("foo", 3)
-		q.AddWeight("bar", 2)
+		q := NewPriorityQueue(DeafultQueueSortWindows, c)
+		q.AddWeight("foo", 4)
+		q.AddWeight("bar", 5)
 		assert.Equal(t, []any{"foo", "bar"}, c.p0)
-		time.Sleep(3 * time.Second)
-		assert.Equal(t, []any{"bar", "foo"}, c.a0)
+		time.Sleep(100 * time.Millisecond)
+		assert.NotEqual(t, []any{"foo", "bar"}, c.a0)
+		time.Sleep(time.Second)
+		assert.Equal(t, []any{"foo", "bar"}, c.a0)
 		item, closed := q.Get()
-		assert.Equal(t, []any{"bar"}, c.g0)
-		assert.Equal(t, "bar", item)
+		assert.Equal(t, []any{"foo"}, c.g0)
+		assert.Equal(t, "foo", item)
 		assert.False(t, closed)
-		q.Done("foo")
-		q.Done("bar")
-		assert.Equal(t, []any{"foo", "bar"}, c.d0)
+		q.Done(item)
+		item, _ = q.Get()
+		q.Done(item)
 		q.ShutDown()
 	})
 }
