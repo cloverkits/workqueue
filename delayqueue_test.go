@@ -1,7 +1,6 @@
 package workqueue
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -34,23 +33,14 @@ func TestDelayingQueueStandard(t *testing.T) {
 		q := NewDelayingQueue(nil)
 		defer q.ShutDown()
 		q.AddAfter(time.Now().Local().UnixMilli(), 2*time.Second)
-		timeoutCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-		for {
-			select {
-			case <-timeoutCtx.Done():
-				assert.Error(t, timeoutCtx.Err())
-				return
-			default:
-				item, closed := q.Get()
-				assert.False(t, closed)
-				q.Done(item)
-				if item.(int64) > time.Now().UnixMilli() {
-					assert.Error(t, errors.New("item should not be ready yet"))
-				} else {
-					assert.Equal(t, (time.Now().UnixMilli()-item.(int64))/1000, int64(2)) // 2秒后被操作。 2 seconds after the operation.
-					return
-				}
-			}
+		item, closed := q.Get()
+		assert.False(t, closed)
+		q.Done(item)
+		if item.(int64) > time.Now().UnixMilli() {
+			assert.Error(t, errors.New("item should not be ready yet"))
+		} else {
+			assert.Equal(t, (time.Now().UnixMilli()-item.(int64))/1000, int64(2)) // 2秒后被操作。 2 seconds after the operation.
+			return
 		}
 	})
 	// 因为时间同步是 500 毫秒一次，所以这里延迟小于 500 毫秒的延迟任务会被延迟到 500 毫秒后执行。
@@ -58,23 +48,14 @@ func TestDelayingQueueStandard(t *testing.T) {
 		q := NewDelayingQueue(nil)
 		defer q.ShutDown()
 		q.AddAfter(time.Now().Local().UnixMilli(), 2*time.Millisecond)
-		timeoutCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-		for {
-			select {
-			case <-timeoutCtx.Done():
-				assert.Error(t, timeoutCtx.Err())
-				return
-			default:
-				item, closed := q.Get()
-				assert.False(t, closed)
-				q.Done(item)
-				if item.(int64) > time.Now().UnixMilli() {
-					assert.Error(t, errors.New("item should not be ready yet"))
-				} else {
-					assert.Equal(t, (time.Now().UnixMilli()-item.(int64))/100, int64(5)) // 500 毫秒后被操作。 500 milliseconds after the operation.
-					return
-				}
-			}
+		item, closed := q.Get()
+		assert.False(t, closed)
+		q.Done(item)
+		if item.(int64) > time.Now().UnixMilli() {
+			assert.Error(t, errors.New("item should not be ready yet"))
+		} else {
+			assert.Equal(t, (time.Now().UnixMilli()-item.(int64))/100, int64(5)) // 500 毫秒后被操作。 500 milliseconds after the operation.
+			return
 		}
 	})
 	t.Run("TwoFireEarly", func(t *testing.T) {
@@ -85,7 +66,6 @@ func TestDelayingQueueStandard(t *testing.T) {
 		defer q.ShutDown()
 		q.AddAfter(first, time.Second)
 		q.AddAfter(second, 50*time.Millisecond)
-		// assert.NotEqual(t, q.Len(), 0)
 		time.Sleep(600 * time.Millisecond)
 		item, closed := q.Get()
 		assert.False(t, closed)

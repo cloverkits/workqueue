@@ -1,7 +1,9 @@
 package workqueue
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -31,62 +33,78 @@ func TestPriorityQueueStandard(t *testing.T) {
 		first := "foo"
 		second := "bar"
 		third := "baz"
+		wg := sync.WaitGroup{}
 		q := NewPriorityQueue(DeafultQueueSortWindows, nil)
 		defer q.ShutDown()
 		q.AddWeight(first, 10)
 		q.AddWeight(second, 30)
 		q.AddWeight(third, 5)
-		item, closed := q.Get()
-		assert.False(t, closed)
-		assert.Equal(t, third, item)
-		q.Done(item)
-		item, closed = q.Get()
-		assert.False(t, closed)
-		assert.Equal(t, first, item)
-		q.Done(item)
-		item, closed = q.Get()
-		assert.False(t, closed)
-		assert.Equal(t, second, item)
-		q.Done(item)
+		wg.Add(1)
+		go func() {
+			item, closed := q.Get()
+			assert.False(t, closed)
+			assert.Equal(t, third, item)
+			q.Done(item)
+			item, closed = q.Get()
+			assert.False(t, closed)
+			assert.Equal(t, first, item)
+			q.Done(item)
+			item, closed = q.Get()
+			assert.False(t, closed)
+			assert.Equal(t, second, item)
+			q.Done(item)
+			wg.Done()
+		}()
+		wg.Wait()
 	})
 	t.Run("TwoFireEarly", func(t *testing.T) {
 		first := "foo"
 		second := "bar"
 		third := "baz"
-		q := NewPriorityQueue(DeafultQueueSortWindows*4, nil)
+		wg := sync.WaitGroup{}
+		q := NewPriorityQueue(DeafultQueueSortWindows, nil)
+		defer q.ShutDown()
 		q.AddWeight(first, 10)
 		q.AddWeight(second, 30)
-		item, closed := q.Get()
-		assert.False(t, closed)
-		assert.Equal(t, first, item)
-		q.Done(item)
+		wg.Add(2)
+		go func() {
+			item, closed := q.Get()
+			assert.False(t, closed)
+			assert.Equal(t, third, item)
+			q.Done(item)
+			wg.Done()
+		}()
 		q.AddWeight(third, 5)
-		item, closed = q.Get()
-		assert.False(t, closed)
-		assert.Equal(t, second, item)
-		q.Done(item)
-		item, closed = q.Get()
-		assert.False(t, closed)
-		assert.Equal(t, third, item)
-		q.Done(item)
+		go func() {
+			item, closed := q.Get()
+			assert.False(t, closed)
+			assert.Equal(t, first, item)
+			q.Done(item)
+			item, closed = q.Get()
+			assert.False(t, closed)
+			assert.Equal(t, second, item)
+			q.Done(item)
+			wg.Done()
+		}()
+		wg.Wait()
 	})
 	t.Run("CallbackFuncs", func(t *testing.T) {
-		// c := &pcb{}
-		// q := NewPriorityQueue(DeafultQueueSortWindows, c)
-		// q.AddWeight("foo", 4)
-		// q.AddWeight("bar", 5)
-		// assert.Equal(t, []any{"foo", "bar"}, c.p0)
-		// time.Sleep(100 * time.Millisecond)
-		// assert.NotEqual(t, []any{"foo", "bar"}, c.a0)
-		// time.Sleep(time.Second)
-		// assert.Equal(t, []any{"foo", "bar"}, c.a0)
-		// item, closed := q.Get()
-		// assert.Equal(t, []any{"foo"}, c.g0)
-		// assert.Equal(t, "foo", item)
-		// assert.False(t, closed)
-		// q.Done(item)
-		// item, _ = q.Get()
-		// q.Done(item)
-		// q.ShutDown()
+		c := &pcb{}
+		q := NewPriorityQueue(DeafultQueueSortWindows, c)
+		q.AddWeight("foo", 4)
+		q.AddWeight("bar", 5)
+		assert.Equal(t, []any{"foo", "bar"}, c.p0)
+		time.Sleep(100 * time.Millisecond)
+		assert.NotEqual(t, []any{"foo", "bar"}, c.a0)
+		time.Sleep(time.Second)
+		assert.Equal(t, []any{"foo", "bar"}, c.a0)
+		item, closed := q.Get()
+		assert.Equal(t, []any{"foo"}, c.g0)
+		assert.Equal(t, "foo", item)
+		assert.False(t, closed)
+		q.Done(item)
+		item, _ = q.Get()
+		q.Done(item)
+		q.ShutDown()
 	})
 }

@@ -152,13 +152,13 @@ func (q *Q) Add(item any) {
 	q.cond.Signal()
 }
 
-// 从队列中获取一个对象
+// 从队列中获取一个对象, 如果队列中没有 item 了, 则会阻塞
 // Get an item from the queue.
 func (q *Q) Get() (item any, closed bool) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 	for len(q.queue) == 0 && !q.closed {
-		q.cond.Wait()
+		q.cond.Wait() // 队列为空, 并且没有关闭，则等待
 	}
 	if len(q.queue) == 0 {
 		// We must be shutting down.

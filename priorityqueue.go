@@ -27,6 +27,7 @@ type PriorityQ struct {
 	priorityHeap *heap // 基于对象的权重堆
 	cb           PriorityCallback
 	lockHeap     sync.Mutex
+	timeWindow   time.Duration
 }
 
 // 创建一个 PriorityQueue 对象
@@ -54,6 +55,7 @@ func newPriorityQ(name string, win time.Duration, cb PriorityCallback) *Priority
 		priorityHeap: &heap{data: make([]*waitingFor, 0, defaultQueueCap)},
 		cb:           cb,
 		lockHeap:     sync.Mutex{},
+		timeWindow:   win, // 500ms
 	}
 	q.ctx, q.cancel = context.WithCancel(context.Background())
 	q.wg.Add(1)
@@ -106,13 +108,17 @@ func (q *PriorityQ) ShutDownWithDrain() {
 // 从堆中读取已经在事件窗口中排序好的 WaitingFor, 放入 Q 中
 // Read the WaitingFor that has been sorted in the event window from the heap and put it into Q
 func (q *PriorityQ) waitingLoop() {
-	defer q.wg.Done()
+	heartbeat := time.NewTicker(q.timeWindow)
+	defer func() {
+		q.wg.Done()
+		heartbeat.Stop()
+	}()
 
 	for {
 		select {
 		case <-q.ctx.Done():
 			return
-		default:
+		case <-heartbeat.C:
 			for {
 				q.lockHeap.Lock()
 				entry := q.priorityHeap.Pop()
