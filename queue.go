@@ -30,7 +30,6 @@ type Q struct {
 	processing set
 	closed     bool
 	drain      bool
-	once       sync.Once
 	cond       *sync.Cond
 	name       string
 	cb         Callback
