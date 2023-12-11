@@ -105,8 +105,8 @@ func (q *PriorityQ) ShutDownWithDrain() {
 	q.lockHeap.Unlock()
 }
 
-// 从堆中读取已经在事件窗口中排序好的 WaitingFor, 放入 Q 中
-// Read the WaitingFor that has been sorted in the event window from the heap and put it into Q
+// 从堆中读取已经在时间窗口中排序好的 WaitingFor, 放入 Queue 中
+// Read the WaitingFor that has been sorted in the time window from the heap and put it into the Queue
 func (q *PriorityQ) waitingLoop() {
 	heartbeat := time.NewTicker(q.timeWindow)
 	defer func() {
