@@ -97,7 +97,8 @@ func main() {
 
 `Delaying Queue` is a queue that supports delaying execution. It is based on `Queue` and uses a `heap` to maintain the expiration time of the item. When you add an item to the queue, you can specify the delay time, and the item will be executed after the delay time.
 
-> [!IMPORTANT] > `Delaying Queue` has a `goroutine` that is sync the current time, used to update timeout scale. It can not be shut down and modified.
+> [!IMPORTANT]
+> `Delaying Queue` has a `goroutine` that is sync the current time, used to update timeout scale. It can not be shut down and modified.
 >
 > Timer minimum resync time is `500ms`, which mean if you set the item's delay time less than `500ms`, it will be processed after `500ms`.
 
