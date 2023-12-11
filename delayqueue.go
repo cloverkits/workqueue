@@ -26,6 +26,7 @@ type DelayingQ struct {
 	waitingHeap *heap        // 基于对象的时间堆
 	now         atomic.Int64 // 当前时间
 	cb          DelayingCallback
+	lockHeap    sync.Mutex
 }
 
 // 创建一个 DelayingQueue 对象
@@ -41,15 +42,20 @@ func NewNamedDelayingQueue(name string, cb DelayingCallback) *DelayingQ {
 }
 
 func newDelayingQ(name string, cb DelayingCallback) *DelayingQ {
+	if cb == nil {
+		cb = emptycb{}
+	}
 	q := &DelayingQ{
 		Q:           *newQ(name, cb),
 		wg:          sync.WaitGroup{},
 		waitingHeap: &heap{data: make([]*waitingFor, 0, defaultQueueCap)},
 		now:         atomic.Int64{},
 		cb:          cb,
+		lockHeap:    sync.Mutex{},
 	}
 	q.ctx, q.cancel = context.WithCancel(context.Background())
 	q.wg.Add(2)
+	q.now.Store(time.Now().UnixNano())
 	go q.waitingLoop()
 	go q.syncNow()
 	return q
@@ -57,7 +63,7 @@ func newDelayingQ(name string, cb DelayingCallback) *DelayingQ {
 
 // 添加一个延迟任务到队列中
 // Add a delayed task to the queue
-func (q *DelayingQ) AddAfter(item interface{}, duration time.Duration) {
+func (q *DelayingQ) AddAfter(item any, duration time.Duration) {
 	if q.ShuttingDown() {
 		return
 	}
@@ -66,10 +72,12 @@ func (q *DelayingQ) AddAfter(item interface{}, duration time.Duration) {
 		q.Add(item)
 		return
 	}
+	q.lockHeap.Lock()
 	q.waitingHeap.Push(&waitingFor{
 		data:  item,
 		value: time.Now().Add(duration).UnixNano(),
 	})
+	q.lockHeap.Unlock()
 }
 
 // 关闭 Queue
@@ -77,12 +85,14 @@ func (q *DelayingQ) AddAfter(item interface{}, duration time.Duration) {
 func (q *DelayingQ) ShutDown() {
 	q.once.Do(func() {
 		q.cond.L.Lock()
-		defer q.cond.L.Unlock()
 		q.drain = false
 		q.shutdown()
 		q.cancel()
 		q.wg.Wait()
+		q.cond.L.Unlock()
+		q.lockHeap.Lock()
 		q.waitingHeap.Reset()
+		q.lockHeap.Unlock()
 	})
 }
 
@@ -91,7 +101,6 @@ func (q *DelayingQ) ShutDown() {
 func (q *DelayingQ) ShutDownWithDrain() {
 	q.once.Do(func() {
 		q.cond.L.Lock()
-		defer q.cond.L.Unlock()
 		q.drain = true
 		q.shutdown()
 		for q.processing.len() > 0 && q.drain {
@@ -99,14 +108,17 @@ func (q *DelayingQ) ShutDownWithDrain() {
 		}
 		q.cancel()
 		q.wg.Wait()
+		q.cond.L.Unlock()
+		q.lockHeap.Lock()
 		q.waitingHeap.Reset()
+		q.lockHeap.Unlock()
 	})
 }
 
-// 同步当前时间
-// sync current time
+// 同步当前时间, 每 500 毫秒钟同步一次, 用于更新超时标尺
+// sync current time, sync once per 500 milliseconds, used to update timeout scale
 func (q *DelayingQ) syncNow() {
-	heartbeat := time.NewTicker(time.Second)
+	heartbeat := time.NewTicker(time.Millisecond * 500)
 	defer func() {
 		q.wg.Done()
 		heartbeat.Stop()
@@ -132,14 +144,18 @@ func (q *DelayingQ) waitingLoop() {
 		case <-q.ctx.Done():
 			return
 		default:
+			q.lockHeap.Lock()
 			entry := q.waitingHeap.Pop()
+			q.lockHeap.Unlock()
 			if entry == nil {
 				continue
 			}
 			if entry.value < q.now.Load() {
 				q.Add(entry.data)
 			} else {
+				q.lockHeap.Lock()
 				q.waitingHeap.Push(entry)
+				q.lockHeap.Unlock()
 			}
 		}
 	}

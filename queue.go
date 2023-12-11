@@ -2,6 +2,7 @@ package workqueue
 
 import (
 	"sync"
+	"time"
 )
 
 const defaultQueueCap = 2048
@@ -44,7 +45,7 @@ func (emptycb) OnAdd(_ any)  {}
 func (emptycb) OnGet(_ any)  {}
 
 // DelayingQueue 的回调接口
-func (emptycb) OnAfter(_ any, _ int) {}
+func (emptycb) OnAfter(_ any, _ time.Duration) {}
 
 // PriorityQueue 的回调接口
 func (emptycb) OnWeight(_ any, _ int) {}

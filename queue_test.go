@@ -332,12 +332,9 @@ func mustGarbageCollect(t *testing.T, i interface{}) {
 		atomic.StoreInt32(&collected, 1)
 	})
 	t.Cleanup(func() {
-		// if err := wait.PollImmediate(time.Millisecond*100, wait.ForeverTestTimeout, func() (done bool, err error) {
-		// 	// Trigger GC explicitly, otherwise we may need to wait a long time for it to run
-		// 	runtime.GC()
-		// 	return atomic.LoadInt32(&collected) == 1, nil
-		// }); err != nil {
-		// 	t.Errorf("object was not garbage collected")
-		// }
+		runtime.GC()
+		if atomic.LoadInt32(&collected) != 1 {
+			assert.Fail(t, "object was not garbage collected")
+		}
 	})
 }

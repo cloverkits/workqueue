@@ -23,6 +23,7 @@ type PriorityQ struct {
 	wg          sync.WaitGroup
 	waitingHeap *heap // 基于对象的权重堆
 	cb          PriorityCallback
+	lockHeap    sync.Mutex
 }
 
 // 创建一个 PriorityQueue 对象
@@ -43,6 +44,7 @@ func newPriorityQ(name string, cb PriorityCallback) *PriorityQ {
 		wg:          sync.WaitGroup{},
 		waitingHeap: &heap{data: make([]*waitingFor, 0, defaultQueueCap)},
 		cb:          cb,
+		lockHeap:    sync.Mutex{},
 	}
 	q.ctx, q.cancel = context.WithCancel(context.Background())
 	q.wg.Add(1)
@@ -52,7 +54,7 @@ func newPriorityQ(name string, cb PriorityCallback) *PriorityQ {
 
 // 添加一个带权重的任务到队列中
 // Add a weighted task to the queue
-func (q *PriorityQ) AddWeight(item interface{}, priority int) {
+func (q *PriorityQ) AddWeight(item any, priority int) {
 	if q.ShuttingDown() {
 		return
 	}
@@ -72,12 +74,14 @@ func (q *PriorityQ) AddWeight(item interface{}, priority int) {
 func (q *PriorityQ) ShutDown() {
 	q.once.Do(func() {
 		q.cond.L.Lock()
-		defer q.cond.L.Unlock()
 		q.drain = false
 		q.shutdown()
 		q.cancel()
 		q.wg.Wait()
+		q.cond.L.Unlock()
+		q.lockHeap.Lock()
 		q.waitingHeap.Reset()
+		q.lockHeap.Unlock()
 	})
 }
 
@@ -86,7 +90,6 @@ func (q *PriorityQ) ShutDown() {
 func (q *PriorityQ) ShutDownWithDrain() {
 	q.once.Do(func() {
 		q.cond.L.Lock()
-		defer q.cond.L.Unlock()
 		q.drain = true
 		q.shutdown()
 		for q.processing.len() > 0 && q.drain {
@@ -94,7 +97,10 @@ func (q *PriorityQ) ShutDownWithDrain() {
 		}
 		q.cancel()
 		q.wg.Wait()
+		q.cond.L.Unlock()
+		q.lockHeap.Lock()
 		q.waitingHeap.Reset()
+		q.lockHeap.Unlock()
 	})
 }
 
